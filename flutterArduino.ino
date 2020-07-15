@@ -2,10 +2,13 @@
 #include <Servo.h>
 //#include <IRremoteESP8266.h>
 //#include <IRsend.h>
+int counter = 0;
 
 const char* ssid = "Leung";
 const char* password = "nathannatalie";
 bool dialMode = false;
+bool sliderMode = false;
+
 Servo panMotor;
 Servo tiltMotor;
 Servo tilt2Motor;
@@ -114,45 +117,66 @@ void loop() {
 
   WiFiClient client = wifiServer.available();
   String command = "";
-
+  String angle = "";
   if (client) {
 
     while (client.connected()) {
       if (dialMode == true){
         Serial.println(translateVoltage(analogRead(A0)));
         clawMotor.write(translateVoltage(analogRead(A0)));
+        delay(10);
       }
+    
+      /*if (sliderMode == true){
+        while (client.available()>0) {
+          delay(100);
+          char a = client.read();
+          if (a == '\n') {
+            break;
+          }
+          angle += a;
+        }
+        
+        
+        Serial.println(client.read());
+        panMotor.write(angle.toInt());
+        delay(10);
+         */ 
+        /*if (a == '-') {
+          break;
+        }
+        angle += a;
+        //panMotor.write(angle);
+        Serial.println(angle);
+        delay(10);
+        */
+        
       //Receive command that is new line terminated
       while (client.available()>0) {
         char c = client.read();
-        if (c == '\n') {
+        if (c == '\n' || c  == '@') {
+          if (c == '@'){
+            Serial.write('\n');
+          }
           break;
         }
+        
         command += c;
         Serial.write(c);
       }
       //command gets processed 
-      if (command == "LED ON") {
-        //irsend.sendRaw(HaierAC_power, 71, 38);  // Send a raw data capture at 38kHz.
+      if (command == "LED ON") { 
         digitalWrite(LED_BUILTIN, LOW);
-        
-     
         Serial.println("We got the power !!");
         
       }else if (command == "LED OFF") {
-        //irsend.sendRaw(HaierAC_tempUp, 71, 38);  // Send a raw data capture at 38kHz.
         digitalWrite(LED_BUILTIN, HIGH);
-        
-    
         Serial.println("temperaturererrksj");
         
       }else if (command == "Open Claw") {
-        //irsend.sendRaw(HaierAC_tempDown, 71, 38);  // Send a raw data capture at 38kHz.
         clawMotor.write(92);
         Serial.println("Claw: Open");
-        //panMotor.write(0);
-      }else if (command == "Close Claw") {
-        //irsend.sendRaw(HaierAC_fan, 71, 38);  // Send a raw data capture at 38kHz.
+      }else if (command == "Close Claw") {     
         clawMotor.write(180);
         Serial.println("Claw: Closed");
         
@@ -166,8 +190,40 @@ void loop() {
         clawMotor.write(180);
 
         Serial.println("robothomee");
+        
+      }else if (command == "Activate Slider") {
+        
+        sliderMode = true;
       }
-
+      else if (command.substring(0,3) == "Pan"){
+        if (sliderMode == true){
+          int angle = (command.substring(6, command.length()+1)).toInt();
+          panMotor.write(angle);
+          Serial.println("Move Pan Motor to " + String(angle));
+         }
+        
+      }
+      else if (command.substring(0,5) == "Tilt2"){
+        if (sliderMode == true){
+          int angle = (command.substring(8, command.length()+1)).toInt();
+          tilt2Motor.write(angle);
+          Serial.println("Move to Tilt2 Motor to" + String(angle));
+        } 
+      }
+      
+      else if (command.substring(0,4) == "Tilt"){
+        if (sliderMode == true){
+          int angle = (command.substring(7, command.length()+1)).toInt();
+          tiltMotor.write(angle);
+          Serial.println("Move Tilt Motor to " + String(angle));
+        }
+        
+      }
+      
+      else if (command == "Disable Sliders") {
+        sliderMode = false;
+        Serial.println("Sliders disabled");
+      }
       command = "";
       delay(10);
     }
