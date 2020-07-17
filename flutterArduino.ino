@@ -77,6 +77,15 @@ float translateVoltage(int analogValue){
   motorPosition = round(motorPosition);
   return(motorPosition);
 }
+int processTiltPosition(int motorPosition){
+  if (motorPosition < 53)motorPosition = 53;
+  if (motorPosition > 135)motorPosition = 135;
+  return motorPosition;
+}
+int processTilt2Position(int motorPosition){
+  if (motorPosition < 30)motorPosition = 30;
+  return motorPosition;
+}
 
 WiFiServer wifiServer(80);
 
@@ -126,30 +135,7 @@ void loop() {
         clawMotor.write(translateVoltage(analogRead(A0)));
         delay(10);
       }
-    
-      /*if (sliderMode == true){
-        while (client.available()>0) {
-          delay(100);
-          char a = client.read();
-          if (a == '\n') {
-            break;
-          }
-          angle += a;
-        }
-        
-        
-        Serial.println(client.read());
-        panMotor.write(angle.toInt());
-        delay(10);
-         */ 
-        /*if (a == '-') {
-          break;
-        }
-        angle += a;
-        //panMotor.write(angle);
-        Serial.println(angle);
-        delay(10);
-        */
+   
         
       //Receive command that is new line terminated
       while (client.available()>0) {
@@ -206,7 +192,7 @@ void loop() {
       else if (command.substring(0,5) == "Tilt2"){
         if (sliderMode == true){
           int angle = (command.substring(8, command.length()+1)).toInt();
-          tilt2Motor.write(angle);
+          tilt2Motor.write(processTilt2Position(angle));
           Serial.println("Move to Tilt2 Motor to" + String(angle));
         } 
       }
@@ -214,8 +200,24 @@ void loop() {
       else if (command.substring(0,4) == "Tilt"){
         if (sliderMode == true){
           int angle = (command.substring(7, command.length()+1)).toInt();
-          tiltMotor.write(angle);
+          tiltMotor.write(processTiltPosition(angle));
           Serial.println("Move Tilt Motor to " + String(angle));
+        }
+        
+      }
+      else if (command.substring(0,4) == "Roll"){
+        if (sliderMode == true){
+          int angle = (command.substring(7, command.length()+1)).toInt();
+          rollMotor.write(angle);
+          Serial.println("Move Roll Motor to " + String(angle));
+        }
+        
+      }
+      else if (command.substring(0,4) == "Claw"){
+        if (sliderMode == true){
+          int angle = (command.substring(7, command.length()+1)).toInt();
+          clawMotor.write(processTiltPosition(angle));
+          Serial.println("Move Claw Motor to " + String(angle));
         }
         
       }
