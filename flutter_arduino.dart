@@ -5,10 +5,16 @@ import "dart:async";
 double _panValue = 0;
 double _tiltValue = 0;
 double _tilt2Value = 0;
+double _rollValue = 0;
+double _clawValue = 0;
+
+List <Map> positionsList = [];
+int mapIndex = -1;
+
 bool isVisible = false;
 void main() async {
   // modify with your true address/port
-  Socket sock = await Socket.connect('192.168.1.189', 80);
+  Socket sock = await Socket.connect('192.168.1.192', 80);
   runApp(MyApp(sock));
 }
 
@@ -51,8 +57,8 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Container(
-        child: Center(
+      body: SingleChildScrollView(
+        //child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -175,6 +181,32 @@ class _MyHomePageState extends State<MyHomePage> {
            
                     },
                   ),
+                  Slider(
+                    min: 0,
+                    max: 180,
+                    value: _rollValue,
+                    onChanged: (value) {  
+                          setState(() {
+                          
+                            _rollValue = value;
+                            widget.channel.write("Roll = ${_rollValue.round()}@");
+                            print("${_rollValue.round()}");
+                          });                       
+                    },
+                  ),
+                  Slider(
+                    min: 0,
+                    max: 180,
+                    value: _clawValue,
+                    onChanged: (value) {  
+                          setState(() {
+                          
+                            _clawValue = value;
+                            widget.channel.write("Claw = ${_clawValue.round()}@");
+                            print("${_clawValue.round()}");
+                          });                       
+                    },
+                  ),
                   RaisedButton(
                     child: Text("Disable Sliders",
                         style: TextStyle(
@@ -186,10 +218,33 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.red,
                     onPressed: _disableSliders,
                   ),
+                  RaisedButton(
+                    child: Text("Record Sliders",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: _recordSliders,
+                  ),
+                  RaisedButton(
+                    child: Text("Playback",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: _playback,
+                  ),
+                  
               
             ],
           ),
-        )
+        //)
       )
     );
   }
@@ -220,6 +275,39 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   void _disableSliders(){
     widget.channel.write("Disable Sliders\n");
+  }
+  void _recordSliders(){
+    widget.channel.write("Position ${++mapIndex}\n");
+    var armPositionMap = new Map();
+
+    armPositionMap["Pan"] = (_panValue.round());
+    armPositionMap["Tilt"] = (_tiltValue.round());
+    armPositionMap["Tilt2"] = (_tilt2Value.round());
+    armPositionMap["Roll"] = (_rollValue.round());
+    armPositionMap["Claw"] = (_clawValue.round());
+
+    positionsList.add(armPositionMap);
+    widget.channel.write(armPositionMap);
+  }
+  void playbackHelper(int positionNumber){
+    widget.channel.write("Pan = ${positionsList[positionNumber]["Pan"]}@");
+    widget.channel.write("Tilt = ${positionsList[positionNumber]["Tilt"]}@");
+    widget.channel.write("Tilt2 = ${positionsList[positionNumber]["Tilt2"]}@");
+    widget.channel.write("Roll = ${positionsList[positionNumber]["Roll"]}@");
+    widget.channel.write("Claw = ${positionsList[positionNumber]["Claw"]}@");
+  }
+  
+  void _playback(){
+    playbackHelper(0);
+    
+    Future.delayed(const Duration(milliseconds: 5000), () {
+      playbackHelper(1);
+    });
+
+    Future.delayed(const Duration(milliseconds: 5000), () {
+      playbackHelper(0);
+    });
+
   }
 
   @override
