@@ -8,13 +8,15 @@ double _tilt2Value = 0;
 double _rollValue = 0;
 double _clawValue = 0;
 
+
 List <Map> positionsList = [];
 int mapIndex = -1;
+int targetPosition = 0;
 
 bool isVisible = false;
 void main() async {
   // modify with your true address/port
-  Socket sock = await Socket.connect('192.168.1.192', 80);
+  Socket sock = await Socket.connect('192.168.1.190', 80);
   runApp(MyApp(sock));
 }
 
@@ -50,7 +52,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -240,6 +242,35 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.red,
                     onPressed: _playback,
                   ),
+                  RaisedButton(
+                    child: Text("Records",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: (){
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => RecordsScreen()),
+                      );
+                    },
+                  ),
+                  RaisedButton(
+                    child: Text("Go to target position",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: (){
+                      playbackHelper(targetPosition);
+                    }
+                  ),
                   
               
             ],
@@ -298,13 +329,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   
   void _playback(){
-    playbackHelper(0);
+    Future.delayed(const Duration(milliseconds: 5000), () {
+      playbackHelper(0);
+    });
     
     Future.delayed(const Duration(milliseconds: 5000), () {
       playbackHelper(1);
     });
 
-    Future.delayed(const Duration(milliseconds: 5000), () {
+    Future.delayed(const Duration(milliseconds: 10000), () {
       playbackHelper(0);
     });
 
@@ -316,3 +349,101 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 }
+
+class RecordsScreen extends StatefulWidget {
+  /*Socket myChannel;
+  RecordsScreen(Socket channel){
+    myChannel = channel;
+  };
+  */
+  @override
+  _RecordsScreenState createState() => _RecordsScreenState();
+}
+
+class _RecordsScreenState extends State<RecordsScreen> {
+
+  List <Widget> _children = [];
+
+  @override
+  void initState() {
+    _add();
+    super.initState();
+  }
+  @override
+  Widget build(BuildContext context) {
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Record Screen"),
+      ),
+      body: Column(
+        children:[
+          Expanded(
+            child: ListView(children: _children), 
+          ),
+          //buttonRow(5),
+          Text("$mapIndex"),
+ 
+        ]
+      ,)
+     
+         
+      
+    );
+  }
+  Widget buttonRow(int positionIndex){
+    return Container(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          
+          Text('Positon $positionIndex'),
+          Text(positionsList[positionIndex].values.toString()),
+        ],
+      )
+    );
+  }
+
+  void _add() {
+      for (int i = 0; i <= mapIndex; i++){
+        _children = List.from(_children)
+          ..add(new Container(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+          
+              Text('Positon $i'),
+              Text(positionsList[i].values.toString()),
+              RaisedButton(
+                    child: Text("Go",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: (){
+                      targetPosition = i;
+                    },
+                  ),
+            ],
+          ),
+        ));
+        
+      } 
+  }
+
+  /*void playbackHelper(int positionNumber){
+    widget.channel.write("Pan = ${positionsList[positionNumber]["Pan"]}@");
+    widget.channel.write("Tilt = ${positionsList[positionNumber]["Tilt"]}@");
+    widget.channel.write("Tilt2 = ${positionsList[positionNumber]["Tilt2"]}@");
+    widget.channel.write("Roll = ${positionsList[positionNumber]["Roll"]}@");
+    widget.channel.write("Claw = ${positionsList[positionNumber]["Claw"]}@");
+  }
+  */
+     
+}
+
+
+  
