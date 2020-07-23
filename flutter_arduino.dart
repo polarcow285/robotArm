@@ -254,7 +254,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: (){
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => RecordsScreen()),
+                        MaterialPageRoute(builder: (context) => RecordsScreen(
+                          title: "title",
+                          channel: widget.channel,
+                        )),
                       );
                     },
                   ),
@@ -329,17 +332,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   
   void _playback(){
-    Future.delayed(const Duration(milliseconds: 5000), () {
-      playbackHelper(0);
-    });
-    
-    Future.delayed(const Duration(milliseconds: 5000), () {
-      playbackHelper(1);
-    });
 
-    Future.delayed(const Duration(milliseconds: 10000), () {
-      playbackHelper(0);
-    });
+      Future.delayed(const Duration(milliseconds: 3000), () {
+        playbackHelper(0);
+      });
+      Future.delayed(const Duration(milliseconds: 6000), () {
+        playbackHelper(1);
+      });
+      Future.delayed(const Duration(milliseconds: 9000), () {
+        playbackHelper(2);
+      });
 
   }
 
@@ -351,11 +353,12 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class RecordsScreen extends StatefulWidget {
-  /*Socket myChannel;
-  RecordsScreen(Socket channel){
-    myChannel = channel;
-  };
-  */
+  final String title;
+  final Socket channel;
+
+  RecordsScreen({Key key, @required this.title, @required this.channel})
+      : super(key: key);
+
   @override
   _RecordsScreenState createState() => _RecordsScreenState();
 }
@@ -424,7 +427,8 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     ),
                     color: Colors.red,
                     onPressed: (){
-                      targetPosition = i;
+                      playbackHelper(i);
+                      //targetPosition = i;
                     },
                   ),
             ],
@@ -434,14 +438,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
       } 
   }
 
-  /*void playbackHelper(int positionNumber){
+  void playbackHelper(int positionNumber){
     widget.channel.write("Pan = ${positionsList[positionNumber]["Pan"]}@");
     widget.channel.write("Tilt = ${positionsList[positionNumber]["Tilt"]}@");
     widget.channel.write("Tilt2 = ${positionsList[positionNumber]["Tilt2"]}@");
     widget.channel.write("Roll = ${positionsList[positionNumber]["Roll"]}@");
     widget.channel.write("Claw = ${positionsList[positionNumber]["Claw"]}@");
   }
-  */
+  
      
 }
 
