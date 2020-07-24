@@ -16,7 +16,7 @@ int targetPosition = 0;
 bool isVisible = false;
 void main() async {
   // modify with your true address/port
-  Socket sock = await Socket.connect('192.168.1.190', 80);
+  Socket sock = await Socket.connect('192.168.1.189', 80);
   runApp(MyApp(sock));
 }
 
@@ -52,7 +52,45 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  String _selectedNumber;
+
+  List <int> numberList = new List();
+  List<DropdownMenuItem<String>> _dropdownMenuItems; 
+
+  @override
+  void initState() {
+    for (int i = 0; i<10; i++){
+      numberList.add(i);
+    }
+    
+    _dropdownMenuItems = buildDropdownMenuItems(numberList);
+   
+    
+    //isVisible = false;
+    _selectedNumber = _dropdownMenuItems[0].value;
+
+    super.initState();
+  }
+  List<DropdownMenuItem<String>> buildDropdownMenuItems(numberList) {
+    List<DropdownMenuItem<String>> items = List();
+    for(int n in numberList){
+      items.add(
+        DropdownMenuItem(
+          child: Text(n.toString()),
+          value: n.toString(),
+        ),
+      );
+    }
+     
+    return items;
+      
+  } 
   
+  onChangeDropdownItem(String selectedNumber) {
+    setState(() {
+      _selectedNumber = selectedNumber;
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -242,6 +280,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.red,
                     onPressed: _playback,
                   ),
+
+                  DropdownButton(
+                    value: _selectedNumber,
+                    items: _dropdownMenuItems,
+                    onChanged: onChangeDropdownItem,
+                  ),
+
                   RaisedButton(
                     child: Text("Records",
                         style: TextStyle(
@@ -332,8 +377,22 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   
   void _playback(){
-
-      Future.delayed(const Duration(milliseconds: 3000), () {
+    int i = 0;
+    print(mapIndex);
+    
+    Timer.periodic(Duration(seconds: int.parse(_selectedNumber)), (timer) {
+      if (i > mapIndex){
+        timer.cancel();
+      }
+      else{
+        playbackHelper(i);
+        i++;
+        print(i);
+      }
+      
+      
+    });
+      /*Future.delayed(const Duration(milliseconds: 3000), () {
         playbackHelper(0);
       });
       Future.delayed(const Duration(milliseconds: 6000), () {
@@ -342,7 +401,7 @@ class _MyHomePageState extends State<MyHomePage> {
       Future.delayed(const Duration(milliseconds: 9000), () {
         playbackHelper(2);
       });
-
+      */
   }
 
   @override
