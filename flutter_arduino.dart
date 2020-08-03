@@ -16,7 +16,7 @@ int targetPosition = 0;
 bool isVisible = false;
 void main() async {
   // modify with your true address/port
-  Socket sock = await Socket.connect('192.168.1.189', 80);
+  Socket sock = await Socket.connect('192.168.1.190', 80);
   runApp(MyApp(sock));
 }
 
@@ -53,6 +53,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   String _selectedNumber;
+  int interpolateIndex = 0;
 
   List <int> numberList = new List();
   List<DropdownMenuItem<String>> _dropdownMenuItems; 
@@ -307,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     },
                   ),
                   RaisedButton(
-                    child: Text("Go to target position",
+                    child: Text("Interpolate",
                         style: TextStyle(
                             color: Colors.white,
                             fontStyle: FontStyle.italic,
@@ -316,7 +317,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     color: Colors.red,
                     onPressed: (){
-                      playbackHelper(targetPosition);
+                      interpolateHelper(positionsList[0], positionsList[1], 100);
                     }
                   ),
                   
@@ -368,12 +369,14 @@ class _MyHomePageState extends State<MyHomePage> {
     positionsList.add(armPositionMap);
     widget.channel.write(armPositionMap);
   }
-  void playbackHelper(int positionNumber){
-    widget.channel.write("Pan = ${positionsList[positionNumber]["Pan"]}@");
-    widget.channel.write("Tilt = ${positionsList[positionNumber]["Tilt"]}@");
-    widget.channel.write("Tilt2 = ${positionsList[positionNumber]["Tilt2"]}@");
-    widget.channel.write("Roll = ${positionsList[positionNumber]["Roll"]}@");
-    widget.channel.write("Claw = ${positionsList[positionNumber]["Claw"]}@");
+  void playbackHelper(int positionNumber, List listOfPositions){
+    widget.channel.write("Pan = ${listOfPositions[positionNumber]["Pan"]}@");
+    widget.channel.write("Tilt = ${listOfPositions[positionNumber]["Tilt"]}@");
+    widget.channel.write("Tilt2 = ${listOfPositions[positionNumber]["Tilt2"]}@");
+    widget.channel.write("Roll = ${listOfPositions[positionNumber]["Roll"]}@");
+    widget.channel.write("Claw = ${listOfPositions[positionNumber]["Claw"]}@");
+    
+    print(listOfPositions[positionNumber]);
   }
   
   void _playback(){
@@ -385,23 +388,121 @@ class _MyHomePageState extends State<MyHomePage> {
         timer.cancel();
       }
       else{
-        playbackHelper(i);
+        playbackHelper(i, positionsList);
         i++;
         print(i);
       }
       
       
     });
-      /*Future.delayed(const Duration(milliseconds: 3000), () {
-        playbackHelper(0);
-      });
-      Future.delayed(const Duration(milliseconds: 6000), () {
-        playbackHelper(1);
-      });
-      Future.delayed(const Duration(milliseconds: 9000), () {
-        playbackHelper(2);
-      });
-      */
+      
+  }
+  Map inBetweensMapConstructor(int resolution){
+    //generates a list for each inbetween point
+    var inBetweensMap = new Map();
+    for (int i = 0; i < resolution-1; i++){
+      inBetweensMap[i] = new List();
+      
+    }
+    return inBetweensMap;
+  }
+
+  Map round(Map inBetweens){
+  for (int p = 0; p < inBetweens.length; p++){
+    for (int i = 0; i < 5; i ++){
+      inBetweens[p][i] = inBetweens[p][i].round();
+    }
+  }
+  return inBetweens;
+    
+  }
+
+  List convertMapToList(Map inBetweens){
+    List <List>inBetweensList = [];
+    List <Map> inBetweensListOfMaps = [];
+    
+    for (int p = 0; p < inBetweens.length; p++){
+      inBetweensList.add(inBetweens[p]);
+    }
+    
+    for (int i = 0; i < inBetweensList.length; i++){
+      var inBetweensMap = new Map();
+      inBetweensMap["Pan"] = inBetweens[i][0];
+      inBetweensMap["Tilt"] = inBetweens[i][1];
+      inBetweensMap["Tilt2"] = inBetweens[i][2];
+      inBetweensMap["Roll"] = inBetweens[i][3];
+      inBetweensMap["Claw"] = inBetweens[i][4];
+      inBetweensListOfMaps.add(inBetweensMap);
+    }
+    return inBetweensListOfMaps;
+  }
+
+  void interpolateHelper(Map position1, Map position2, int resolution){
+      List <int> position1List = [];
+      List <int> position2List = [];
+      List <double> incrementList = [];
+    
+  
+    var inBetweensMap = inBetweensMapConstructor(resolution);
+    double increment = 0;
+    
+    //puts all angles of each position into its own list
+    position1.forEach((k,v) => position1List.add(v));
+    position2.forEach((k,v) => position2List.add(v));
+    
+    for (int i = 0; i<5; i++){
+        int difference = position2List[i] - position1List[i];    
+        increment = (difference/resolution);
+        incrementList.add(increment);
+    }
+    
+    
+  
+    for (int j = 0; j < inBetweensMap.length; j++){
+      for(int k = 0; k < 5; k++){
+        
+        
+      
+        if(j == 0){
+          double angle = position1List[k] + incrementList[k];
+          inBetweensMap[j].add(angle);
+        }
+        else{
+          double angle = inBetweensMap[j-1][k] + incrementList[k];
+          
+          if (incrementList[k] > 0 && angle >= position2List[k]){ 
+            inBetweensMap[j].add(position2List[k]);
+          }
+          else if (incrementList[k] < 0 && angle <= position2List[k]){
+            inBetweensMap[j].add(position2List[k]);
+          }
+          else{
+            inBetweensMap[j].add(angle);
+          }
+          
+         
+        }
+
+      }
+    }
+    
+    round(inBetweensMap);
+    
+    //playbackHelper(0, positionsList);
+    
+    interpolateIndex = 0;
+
+    Timer.periodic(Duration(seconds: int.parse(_selectedNumber)), (timer) {
+      print(inBetweensMap.length);
+      playbackHelper(interpolateIndex, convertMapToList(inBetweensMap));
+      interpolateIndex++; 
+      if (interpolateIndex == inBetweensMap.length){
+        playbackHelper(1, positionsList);
+        timer.cancel();
+      }
+      
+    });
+    
   }
 
   @override
