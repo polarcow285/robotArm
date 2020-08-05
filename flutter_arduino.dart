@@ -16,7 +16,7 @@ int targetPosition = 0;
 bool isVisible = false;
 void main() async {
   // modify with your true address/port
-  Socket sock = await Socket.connect('192.168.1.190', 80);
+  Socket sock = await Socket.connect('192.168.1.192', 80);
   runApp(MyApp(sock));
 }
 
@@ -55,13 +55,19 @@ class _MyHomePageState extends State<MyHomePage> {
   String _selectedNumber;
   int interpolateIndex = 0;
 
+  bool stopFlag = false;
+  bool interpolateSegmentDone = false;
+
   List <int> numberList = new List();
   List<DropdownMenuItem<String>> _dropdownMenuItems; 
 
   @override
   void initState() {
-    for (int i = 0; i<10; i++){
+    for (int i = 0; i<11; i++){
       numberList.add(i);
+    }
+    for (int i = 1; i<11; i++){
+      numberList.add(i*100);
     }
     
     _dropdownMenuItems = buildDropdownMenuItems(numberList);
@@ -270,6 +276,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.red,
                     onPressed: _recordSliders,
                   ),
+                  timeIntervalRow(),
                   RaisedButton(
                     child: Text("Playback",
                         style: TextStyle(
@@ -280,12 +287,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     color: Colors.red,
                     onPressed: _playback,
-                  ),
-
-                  DropdownButton(
-                    value: _selectedNumber,
-                    items: _dropdownMenuItems,
-                    onChanged: onChangeDropdownItem,
                   ),
 
                   RaisedButton(
@@ -307,28 +308,66 @@ class _MyHomePageState extends State<MyHomePage> {
                       );
                     },
                   ),
-                  RaisedButton(
-                    child: Text("Interpolate",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontStyle: FontStyle.italic,
-                            fontSize: 20.0
-                        )
-                    ),
-                    color: Colors.red,
-                    onPressed: (){
-                      interpolateHelper(positionsList[0], positionsList[1], 100);
-                    }
-                  ),
-                  
-              
+                  interpolateRow(),
             ],
           ),
         //)
       )
     );
   }
+  Widget timeIntervalRow(){
+    return Container(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text('Time Interval: '),
+          DropdownButton(
+            value: _selectedNumber,
+            items: _dropdownMenuItems,
+            onChanged: onChangeDropdownItem,
+          ),
+          Text('ms'),
+        ],
+      )
+    );
+  }
+  Widget interpolateRow(){
+    return Container(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          RaisedButton(
+            child: Text("Interpolate",
+              style: TextStyle(
+              color: Colors.white,
+              fontStyle: FontStyle.italic,
+              fontSize: 20.0
+              )
+            ),
+            color: Colors.red,
+            onPressed: (){
+              stopFlag = false;
+              interpolateAll(100);
+            }
+          ),
+          RaisedButton(
+            child: Text("Stop",
+              style: TextStyle(
+              color: Colors.white,
+              fontStyle: FontStyle.italic,
+              fontSize: 20.0
+              )
+            ),
+            color: Colors.red,
+            onPressed: (){
+              stopFlag = true;
+            }
+          ),          
+        ],
+      )
 
+    );
+  }
   void _ledOn() {
     widget.channel.write("LED ON\n");
     isVisible = false;
@@ -488,21 +527,42 @@ class _MyHomePageState extends State<MyHomePage> {
     
     round(inBetweensMap);
     
-    //playbackHelper(0, positionsList);
+    playbackHelper(0, positionsList);
     
     interpolateIndex = 0;
+    interpolateSegmentDone = false;
 
-    Timer.periodic(Duration(seconds: int.parse(_selectedNumber)), (timer) {
+    Timer.periodic(Duration(milliseconds: int.parse(_selectedNumber)), (timer) {
       print(inBetweensMap.length);
       playbackHelper(interpolateIndex, convertMapToList(inBetweensMap));
       interpolateIndex++; 
       if (interpolateIndex == inBetweensMap.length){
         playbackHelper(1, positionsList);
+        interpolateSegmentDone = true;
+        timer.cancel();
+      }
+      if(stopFlag == true){
         timer.cancel();
       }
       
     });
     
+  }
+
+  void interpolateAll(int resolution){
+    interpolateSegmentDone = true;
+ 
+    for (int i = 0; i < positionsList.length-1; i++){
+      print (i);
+      if (interpolateSegmentDone == true){
+        interpolateHelper(positionsList[i], positionsList[i+1], resolution);
+      }
+      else{
+        --i;
+      }
+      
+      
+    }
   }
 
   @override
