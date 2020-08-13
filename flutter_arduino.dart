@@ -16,7 +16,7 @@ int targetPosition = 0;
 bool isVisible = false;
 void main() async {
   // modify with your true address/port
-  Socket sock = await Socket.connect('192.168.1.192', 80);
+  Socket sock = await Socket.connect('192.168.1.189', 80);
   runApp(MyApp(sock));
 }
 
@@ -53,13 +53,16 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   String _selectedNumber;
+  String _selectedResolution;
   int interpolateIndex = 0;
 
   bool stopFlag = false;
-  bool interpolateSegmentDone = false;
+ 
 
   List <int> numberList = new List();
+  List <int> resolutionList = new List();
   List<DropdownMenuItem<String>> _dropdownMenuItems; 
+  List<DropdownMenuItem<String>> _resolutionDropdownMenuItems;
 
   @override
   void initState() {
@@ -69,15 +72,20 @@ class _MyHomePageState extends State<MyHomePage> {
     for (int i = 1; i<11; i++){
       numberList.add(i*100);
     }
-    
+    for (int i = 0; i<11; i++){
+      resolutionList.add(i);
+    }
+    for (int i = 2; i<11; i++){
+      resolutionList.add(i*10);
+    }
     _dropdownMenuItems = buildDropdownMenuItems(numberList);
-   
+    _resolutionDropdownMenuItems = buildResolutionDropdownMenuItems(resolutionList);
     
     //isVisible = false;
     _selectedNumber = _dropdownMenuItems[0].value;
-
+    _selectedResolution = _resolutionDropdownMenuItems[0].value;
     super.initState();
-  }
+  } 
   List<DropdownMenuItem<String>> buildDropdownMenuItems(numberList) {
     List<DropdownMenuItem<String>> items = List();
     for(int n in numberList){
@@ -90,12 +98,29 @@ class _MyHomePageState extends State<MyHomePage> {
     }
      
     return items;
-      
-  } 
-  
+
+  }
+  List<DropdownMenuItem<String>> buildResolutionDropdownMenuItems(resolutionList) {
+    List<DropdownMenuItem<String>> items = List();
+    for(int n in resolutionList){
+      items.add(
+        DropdownMenuItem(
+          child: Text(n.toString()),
+          value: n.toString(),
+        ),
+      );
+    }
+     
+    return items; 
+  }
   onChangeDropdownItem(String selectedNumber) {
     setState(() {
       _selectedNumber = selectedNumber;
+    });
+  }
+  onChangeResolutionDropdownItem(String selectedResolution) {
+    setState(() {
+      _selectedResolution = selectedResolution;
     });
   }
   @override
@@ -277,6 +302,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: _recordSliders,
                   ),
                   timeIntervalRow(),
+                  resolutionRow(),
                   RaisedButton(
                     child: Text("Playback",
                         style: TextStyle(
@@ -309,6 +335,17 @@ class _MyHomePageState extends State<MyHomePage> {
                     },
                   ),
                   interpolateRow(),
+                  RaisedButton(
+                    child: Text("Water Pump",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: _waterPump,
+                  ),
             ],
           ),
         //)
@@ -331,6 +368,22 @@ class _MyHomePageState extends State<MyHomePage> {
       )
     );
   }
+  Widget resolutionRow(){
+    return Container(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text('Resolution: '),
+          DropdownButton(
+            value: _selectedResolution,
+            items: _resolutionDropdownMenuItems,
+            onChanged: onChangeResolutionDropdownItem,
+          ),
+          Text('moves/segment'),
+        ],
+      )
+    );
+  }
   Widget interpolateRow(){
     return Container(
     child: Row(
@@ -347,7 +400,7 @@ class _MyHomePageState extends State<MyHomePage> {
             color: Colors.red,
             onPressed: (){
               stopFlag = false;
-              interpolateAll(100);
+              interpolateAll(50);
             }
           ),
           RaisedButton(
@@ -407,6 +460,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
     positionsList.add(armPositionMap);
     widget.channel.write(armPositionMap);
+  }
+  void _waterPump() {
+    widget.channel.write("Water Pump\n");
   }
   void playbackHelper(int positionNumber, List listOfPositions){
     widget.channel.write("Pan = ${listOfPositions[positionNumber]["Pan"]}@");
@@ -475,33 +531,30 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     return inBetweensListOfMaps;
   }
-
-  void interpolateHelper(Map position1, Map position2, int resolution){
-      List <int> position1List = [];
-      List <int> position2List = [];
-      List <double> incrementList = [];
+  //helper function that takes in positionIndex and resolution, outcomes list of inBetweens
+  List interpolateHelper(int initialPositionIndex, int resolution){
+    List <int> position1List = [];
+    List <int> position2List = [];
+    List <double> incrementList = [];
     
   
     var inBetweensMap = inBetweensMapConstructor(resolution);
     double increment = 0;
     
     //puts all angles of each position into its own list
-    position1.forEach((k,v) => position1List.add(v));
-    position2.forEach((k,v) => position2List.add(v));
+    positionsList[initialPositionIndex].forEach((k,v) => position1List.add(v));
+    positionsList[initialPositionIndex + 1].forEach((k,v) => position2List.add(v));
     
+    //calculates the increment from position1 to position2 for each angle and puts it into incrementList
     for (int i = 0; i<5; i++){
         int difference = position2List[i] - position1List[i];    
         increment = (difference/resolution);
         incrementList.add(increment);
     }
-    
-    
-  
+    //calculates the inBetweens positions and puts them into a Map (inBetweensMap)
     for (int j = 0; j < inBetweensMap.length; j++){
       for(int k = 0; k < 5; k++){
         
-        
-      
         if(j == 0){
           double angle = position1List[k] + incrementList[k];
           inBetweensMap[j].add(angle);
@@ -509,9 +562,11 @@ class _MyHomePageState extends State<MyHomePage> {
         else{
           double angle = inBetweensMap[j-1][k] + incrementList[k];
           
+          //if the inBetween point is greater than position2, then it stops at position2
           if (incrementList[k] > 0 && angle >= position2List[k]){ 
             inBetweensMap[j].add(position2List[k]);
           }
+          //if the inBetween point is less than position2, then it stops at position2
           else if (incrementList[k] < 0 && angle <= position2List[k]){
             inBetweensMap[j].add(position2List[k]);
           }
@@ -524,45 +579,50 @@ class _MyHomePageState extends State<MyHomePage> {
 
       }
     }
-    
+
+    //rounds every angle to the closest integer
     round(inBetweensMap);
-    
-    playbackHelper(0, positionsList);
-    
-    interpolateIndex = 0;
-    interpolateSegmentDone = false;
+    return(convertMapToList(inBetweensMap));
+
+  }
+  void interpolateAll(int resolution){
+    int positionIndex = 0;
+    print("HELLO");
+    interpolateIndex = -1;
+    List inBetweensList = [];
 
     Timer.periodic(Duration(milliseconds: int.parse(_selectedNumber)), (timer) {
-      print(inBetweensMap.length);
-      playbackHelper(interpolateIndex, convertMapToList(inBetweensMap));
-      interpolateIndex++; 
-      if (interpolateIndex == inBetweensMap.length){
-        playbackHelper(1, positionsList);
-        interpolateSegmentDone = true;
-        timer.cancel();
-      }
+      
+      //print(inBetweensMap.length);
+      print(interpolateIndex);
       if(stopFlag == true){
         timer.cancel();
       }
-      
+      if (interpolateIndex == -1){
+        //runs first position of the segment
+        print(positionsList[positionIndex]);
+        playbackHelper(positionIndex, positionsList);
+        interpolateIndex++;
+        inBetweensList = interpolateHelper(positionIndex, resolution);
+      }
+      else if (interpolateIndex == inBetweensList.length){
+        //runs final position of the segment
+        playbackHelper(positionIndex + 1, positionsList);
+        print(positionsList[positionIndex + 1]);
+        interpolateIndex = -1;
+        if(++positionIndex == positionsList.length-1){
+          timer.cancel();
+        }
+    
+      }
+      else if(interpolateIndex >= 0){
+        playbackHelper(interpolateIndex, inBetweensList);
+        print(inBetweensList[interpolateIndex]);
+        interpolateIndex++; 
+      }      
+
     });
     
-  }
-
-  void interpolateAll(int resolution){
-    interpolateSegmentDone = true;
- 
-    for (int i = 0; i < positionsList.length-1; i++){
-      print (i);
-      if (interpolateSegmentDone == true){
-        interpolateHelper(positionsList[i], positionsList[i+1], resolution);
-      }
-      else{
-        --i;
-      }
-      
-      
-    }
   }
 
   @override
