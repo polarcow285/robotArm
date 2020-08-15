@@ -10,6 +10,7 @@ double _clawValue = 0;
 
 
 List <Map> positionsList = [];
+List <List> programsList = [];
 int mapIndex = -1;
 int targetPosition = 0;
 
@@ -336,6 +337,28 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   interpolateRow(),
                   RaisedButton(
+                    child: Text("Clear Records",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: clearRecords,
+                  ),
+                  RaisedButton(
+                    child: Text("Save",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0
+                        )
+                    ),
+                    color: Colors.red,
+                    onPressed: saveAs,
+                  ),
+                  RaisedButton(
                     child: Text("Water Pump",
                         style: TextStyle(
                             color: Colors.white,
@@ -624,7 +647,18 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     
   }
-
+  void saveAs(){
+    programsList.clear();
+    programsList.add(new List());
+    for (int i = 0; i < positionsList.length; i++){
+      programsList[0].add(positionsList[i]);
+    }
+    print(programsList);
+  }
+  void clearRecords(){
+    positionsList.clear();
+    print(programsList);
+  }
   @override
   void dispose() {
     widget.channel.close();
@@ -688,7 +722,8 @@ class _RecordsScreenState extends State<RecordsScreen> {
   }
 
   void _add() {
-      for (int i = 0; i <= mapIndex; i++){
+      //for (int i = 0; i <= mapIndex; i++){
+      for (int i = 0; i < positionsList.length; i++){
         _children = List.from(_children)
           ..add(new Container(
           child: Row(
